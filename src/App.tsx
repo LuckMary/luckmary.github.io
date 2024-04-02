@@ -10,6 +10,12 @@ enum Status {
   completed,
 }
 
+enum Tabs {
+  active,
+  completed,
+  all,
+}
+
 interface Todo {
   id: string;
   title: string;
@@ -23,6 +29,8 @@ const App = () => {
   ]);
   const [todo, setTodo] = useState<string>("");
   const [toggle, setToggle] = useState<Status | null>(null);
+
+  const [tab, setTab] = useState<Tabs>(Tabs.all);
 
   console.log(todos);
 
@@ -75,17 +83,6 @@ const App = () => {
     setTodos(todos.filter((todo) => todo.status === Status.active));
   };
 
-  const selectAll = () => {
-    setTodos(todos);
-  };
-
-  const selectActive = () => {
-    setTodos(todos.filter((todo) => todo.status === Status.active));
-  };
-  const selectCompleted = () => {
-    setTodos(todos.filter((todo) => todo.status === Status.completed));
-  };
-
   return (
     <>
       <section className="todoapp">
@@ -107,73 +104,102 @@ const App = () => {
           <ul className="todo-list">
             {/* These are here just to show the structure of the list items 
          List items should get the className `editing` when editing and `completed` when marked as completed  */}
-            {todos.map((todo) => (
-              <li className={todo.status.toString()}>
-                <div className="view">
-                  <input
-                    className="toggle"
-                    type="checkbox"
-                    checked={todo.status === Status.completed}
-                    onChange={() => changeStatus(todo.id)}
-                  />
-                  <label
-                    style={{
-                      textDecoration:
-                        todo.status === Status.completed
-                          ? "line-through"
-                          : "none",
-                    }}
-                  >
-                    {todo.title}
-                  </label>
-                  <button
-                    className="destroy"
-                    onClick={() => deleteTodo(todo.id)}
-                  ></button>
-                </div>
-                <input className="edit" value="Create a TodoMVC template" />
-              </li>
-            ))}
+
+            {todos
+              .filter(
+                (todo) =>
+                  todo.status ===
+                  (tab === Tabs.active
+                    ? Status.active
+                    : tab === Tabs.completed
+                    ? Status.completed
+                    : todo.status)
+              )
+              .map((todo) => (
+                <li className={todo.status.toString()}>
+                  <div className="view">
+                    <input
+                      className="toggle"
+                      type="checkbox"
+                      checked={todo.status === Status.completed}
+                      onChange={() => changeStatus(todo.id)}
+                    />
+                    <label
+                      style={{
+                        textDecoration:
+                          todo.status === Status.completed
+                            ? "line-through"
+                            : "none",
+                      }}
+                    >
+                      {todo.title}
+                    </label>
+                    <button
+                      className="destroy"
+                      onClick={() => deleteTodo(todo.id)}
+                    ></button>
+                  </div>
+                  <input className="edit" value="Create a TodoMVC template" />
+                </li>
+              ))}
           </ul>
         </section>
         {/* This footer should be hidden by default and shown when there are todos */}
-        <footer className="footer">
-          {/* This should be `0 items left` by default */}
-          <span className="todo-count">
-            <strong>
-              {todos.filter((todo) => todo.status === Status.active).length}
-            </strong>{" "}
-            item left
-          </span>
-          {/* Remove this if you don't implement routing  */}
-          <ul className="filters">
-            <li>
-              <a className="selected" href="#/" onClick={() => selectAll()}>
-                All
-              </a>
-            </li>
-            <li>
-              <a href="#/active" onClick={() => selectActive()}>
-                Active
-              </a>
-            </li>
-            <li>
-              <a href="#/completed" onClick={() => selectCompleted()}>
-                Completed
-              </a>
-            </li>
-          </ul>
-          {/* Hidden if no completed items are left ↓ */}
-          {!!todos.filter((todo) => todo.status === Status.completed)
-            .length && (
-            <button
-              className="clear-completed"
-              onClick={() => clearCompleted()}
-            >
-              Clear completed
-            </button>
-          )}
-        </footer>
+        {!!todos.length && (
+          <footer className="footer">
+            {/* This should be `0 items left` by default */}
+            <span className="todo-count">
+              <strong>
+                {todos.filter((todo) => todo.status === Status.active).length}
+              </strong>{" "}
+              item left
+            </span>
+            {/* Remove this if you don't implement routing  */}
+            <ul className="filters">
+              <li>
+                <a
+                  className="selected"
+                  href="#/"
+                  onClick={() => {
+                    setTab(Tabs.all);
+                  }}
+                >
+                  All
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#/active"
+                  onClick={() => {
+                    setTab(Tabs.active);
+                  }}
+                >
+                  Active
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#/completed"
+                  onClick={() => {
+                    setTab(Tabs.completed);
+                  }}
+                >
+                  Completed
+                </a>
+              </li>
+            </ul>
+            {/* Hidden if no completed items are left ↓ */}
+            {!!todos.filter((todo) => todo.status === Status.completed)
+              .length && (
+              <button
+                className="clear-completed"
+                onClick={() => clearCompleted()}
+              >
+                Clear completed
+              </button>
+            )}
+          </footer>
+        )}
       </section>
       <Footer />
     </>
