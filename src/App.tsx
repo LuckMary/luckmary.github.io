@@ -1,9 +1,10 @@
-import React, { useState, KeyboardEvent } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { KeyboardEventOnInputField } from "./types";
+import { useOutsideClick } from "./utils/useOutsideClick";
 
 enum Status {
   active,
@@ -31,38 +32,56 @@ const App = () => {
   const [toggle, setToggle] = useState<Status | null>(null);
 
   const [tab, setTab] = useState<Tabs>(Tabs.all);
+  const [editTodo, setEditTodo] = useState<Todo | null>(null);
+  const [title, setTitle] = useState<string>("");
+  const veiwRef = useRef(null);
 
-  console.log(todos);
+  useOutsideClick(veiwRef, () => {
+    edit();
+  });
 
-  const handleKeyDown = (e: KeyboardEventOnInputField) => {
-    if (e.key === "Enter") {
-      const value = e.target.value.trim();
-
-      if (value.length < 2) return;
-
-      setTodos([
-        ...todos,
-        { id: uuidv4(), title: todo, status: Status.active },
-      ]);
-      setTodo("");
-    }
+  const edit = () => {
+    setTodos(todos.map((todo) => (todo.id === editTodo?.id ? editTodo : todo)));
+    setEditTodo(null);
   };
-  const changeStatus = (id: string) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id
-          ? {
-              ...todo,
-              status:
-                todo.status === Status.completed
-                  ? Status.active
-                  : Status.completed,
-            }
-          : todo
-      )
-    );
-  };
-  const toggleAll = () => {
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEventOnInputField) => {
+      if (e.key === "Enter") {
+        const value = e.target.value.trim();
+
+        if (value.length < 2) return;
+
+        setTodos([
+          ...todos,
+          { id: uuidv4(), title: todo, status: Status.active },
+        ]);
+        setTodo("");
+      }
+    },
+    [todos, todo]
+  );
+
+  const changeStatus = useCallback(
+    (id: string) => {
+      setTodos(
+        todos.map((todo) =>
+          todo.id === id
+            ? {
+                ...todo,
+                status:
+                  todo.status === Status.completed
+                    ? Status.active
+                    : Status.completed,
+              }
+            : todo
+        )
+      );
+    },
+    [todos]
+  );
+
+  const toggleAll = useCallback(() => {
     const newStatus =
       toggle === Status.completed ? Status.active : Status.completed;
     setToggle(newStatus);
@@ -73,15 +92,32 @@ const App = () => {
         status: newStatus,
       }))
     );
-  };
+  }, [toggle, todos]);
 
-  const deleteTodo = (id: string) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
-  };
+  const deleteTodo = useCallback(
+    (id: string) => {
+      setTodos(todos.filter((todo) => todo.id !== id));
+    },
+    [todos]
+  );
 
-  const clearCompleted = () => {
+  const clearCompleted = useCallback(() => {
     setTodos(todos.filter((todo) => todo.status === Status.active));
-  };
+  }, [todos]);
+
+  const visibleTodos = useMemo(
+    () =>
+      todos.filter(
+        (todo) =>
+          todo.status ===
+          (tab === Tabs.active
+            ? Status.active
+            : tab === Tabs.completed
+            ? Status.completed
+            : todo.status)
+      ),
+    [todos, tab]
+  );
 
   return (
     <>
@@ -101,47 +137,46 @@ const App = () => {
             onChange={() => toggleAll()}
           />
           <label htmlFor="toggle-all">Mark all as complete</label>
-          <ul className="todo-list">
+          <ul
+            className="todo-list"
+            // ref={veiwRef}
+          >
             {/* These are here just to show the structure of the list items 
          List items should get the className `editing` when editing and `completed` when marked as completed  */}
 
-            {todos
-              .filter(
-                (todo) =>
-                  todo.status ===
-                  (tab === Tabs.active
-                    ? Status.active
-                    : tab === Tabs.completed
-                    ? Status.completed
-                    : todo.status)
-              )
-              .map((todo) => (
-                <li className={todo.status.toString()}>
-                  <div className="view">
-                    <input
-                      className="toggle"
-                      type="checkbox"
-                      checked={todo.status === Status.completed}
-                      onChange={() => changeStatus(todo.id)}
-                    />
-                    <label
-                      style={{
-                        textDecoration:
-                          todo.status === Status.completed
-                            ? "line-through"
-                            : "none",
-                      }}
-                    >
-                      {todo.title}
-                    </label>
-                    <button
-                      className="destroy"
-                      onClick={() => deleteTodo(todo.id)}
-                    ></button>
-                  </div>
-                  <input className="edit" value="Create a TodoMVC template" />
-                </li>
-              ))}
+            {visibleTodos.map((todo) => (
+              <li
+                {...(todo.status === Status.completed && {
+                  className: "completed",
+                })}
+                {...(editTodo?.id === todo.id && {
+                  className: "editing",
+                  ref: veiwRef,
+                })}
+              >
+                <div className="view" onDoubleClick={() => setEditTodo(todo)}>
+                  <input
+                    className="toggle"
+                    type="checkbox"
+                    checked={todo.status === Status.completed}
+                    onChange={() => changeStatus(todo.id)}
+                  />
+                  <label>{todo.title}</label>
+                  <button
+                    className="destroy"
+                    onClick={() => deleteTodo(todo.id)}
+                  ></button>
+                </div>
+                <input
+                  className="edit"
+                  value={editTodo?.title}
+                  onChange={(e) => {
+                    setEditTodo({ ...editTodo, title: e.target.value } as Todo);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && edit()}
+                />
+              </li>
+            ))}
           </ul>
         </section>
         {/* This footer should be hidden by default and shown when there are todos */}
