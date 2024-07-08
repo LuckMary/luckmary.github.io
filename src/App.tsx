@@ -193,7 +193,7 @@ const App = () => {
             <ul className="filters">
               <li>
                 <a
-                  className="selected"
+                  {...(tab === Tabs.all && { className: "selected" })}
                   href="#/"
                   onClick={() => {
                     setTab(Tabs.all);
@@ -204,6 +204,7 @@ const App = () => {
               </li>
               <li>
                 <a
+                  {...(tab === Tabs.active && { className: "selected" })}
                   href="#/active"
                   onClick={() => {
                     setTab(Tabs.active);
@@ -214,6 +215,7 @@ const App = () => {
               </li>
               <li>
                 <a
+                  {...(tab === Tabs.completed && { className: "selected" })}
                   href="#/completed"
                   onClick={() => {
                     setTab(Tabs.completed);
